@@ -10,6 +10,10 @@ import Charts
 import TinyConstraints
 
 class ViewController: UIViewController, ChartViewDelegate {
+    @IBOutlet weak var progressBar: UIActivityIndicatorView!
+    
+    @IBOutlet weak var zoomOutButton: UIButton!
+    @IBOutlet weak var resetViewButton: UIButton!
     
     lazy var lineChartView: LineChartView = {
         let chartView = LineChartView()
@@ -32,30 +36,32 @@ class ViewController: UIViewController, ChartViewDelegate {
     }()
     
     var waterData: [ChartDataEntry] = []
-
+    
+    // TODO: put chart in a container so it doesn't take up the full superview?
     override func viewDidLoad() {
         super.viewDidLoad()
-        
+        title = "Sump Water Levels"
         view.addSubview(lineChartView)
         lineChartView.centerInSuperview()
         lineChartView.width(to: view)
         lineChartView.heightToWidth(of: view)
+        
+        fetchWaterLevels()
+    }
 
-        // Get data points
-        DataService.shared.fetchWaterLevels { (result) in
-            switch result{
-                case .success(let waterLevels):
-                    // TODO: modify the data model so it returns in a format that can be easily charted?  Or maybe mapping it somehow is quicker?
-                    for level in waterLevels{
-                        let newLevel: ChartDataEntry = ChartDataEntry(x: Double(level.id), y: level.measurement)
-                        self.waterData.append(newLevel)
-                    }
-                    // Call to set the chart data after all the data has been retreived
-                    self.setData()
-                case .failure(let error):
-                    print(error)
-                }
+    @IBAction func zoomClicked(_ sender: Any) {
+        lineChartView.zoomOut()
+    }
+    @IBAction func resetClicked(_ sender: Any) {
+        let alertController = UIAlertController(title: "Alert", message: "New data will be fetched", preferredStyle: .alert)
+        let OKAction = UIAlertAction(title: "OK", style: .default) {
+            (action: UIAlertAction!) in
+            // Code in this block will trigger when OK button tapped.
+            self.fetchWaterLevels()
+            print("data refreshed");
         }
+        alertController.addAction(OKAction)
+        self.present(alertController, animated: true, completion: nil)
         
     }
     
@@ -63,8 +69,33 @@ class ViewController: UIViewController, ChartViewDelegate {
         print(entry)
     }
     
-    // TODO: add button to refresh data (gets data again from api and redraws
-    // TODO: add button to refresh view - zoom out if clicked into zoom
+    private func fetchWaterLevels(){
+        progressBar.isHidden = false
+        self.waterData = []
+        // Get data points (use weak self to prevent closure from causing a memory leak)
+        DataService.shared.fetchWaterLevels { [weak self] (result) in
+            switch result{
+                case .success(let waterLevels):
+                    // TODO: modify the data model so it returns in a format that can be easily charted?  Or maybe mapping it somehow is quicker?
+                    for level in waterLevels{
+                        let newLevel: ChartDataEntry = ChartDataEntry(x: Double(level.id), y: level.measurement)
+                        self?.waterData.append(newLevel)
+                        print(newLevel)
+                    }
+                    // Call to set the chart data after all the data has been retreived
+                    print("Resetting data")
+                    DispatchQueue.main.async {
+                        self?.setData()
+                    }
+                    
+                case .failure(let error):
+                    print(error)
+                }
+            
+        }
+        progressBar.isHidden = true
+    }
+    
     func setData(){
         let set1 = LineChartDataSet(entries: waterData, label: "Water Measurements")
         
@@ -76,17 +107,11 @@ class ViewController: UIViewController, ChartViewDelegate {
         
         let data = LineChartData(dataSet: set1)
         lineChartView.data = data
+        
+        data.notifyDataChanged()
+        lineChartView.notifyDataSetChanged()
+        print("Data changed")
     }
     
-    let yValues: [ChartDataEntry] = [
-        ChartDataEntry(x: 0.0, y: 10.0),
-        ChartDataEntry(x: 1.0, y: 5.0),
-        ChartDataEntry(x: 2.0, y: 7.0),
-        ChartDataEntry(x: 3.0, y: 5.0),
-        ChartDataEntry(x: 4.0, y: 10.0)
-
-    ]
-
-
 }
 

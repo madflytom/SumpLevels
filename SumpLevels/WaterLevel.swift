@@ -23,7 +23,6 @@ struct WaterLevel: Codable {
         
         self.id = try container.decode(Int.self, forKey: .id)
         self.loggedTime = try container.decode(String.self, forKey: .loggedTime)
-        // this is how you do a property that might be nil
         self.measurement = try container.decode(Double.self, forKey: .measurement)
     }
 }
