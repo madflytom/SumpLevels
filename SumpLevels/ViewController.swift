@@ -14,6 +14,20 @@ class ViewController: UIViewController, ChartViewDelegate {
     lazy var lineChartView: LineChartView = {
         let chartView = LineChartView()
         chartView.backgroundColor = .systemGray2
+        chartView.rightAxis.enabled = false
+        
+        let yAxis = chartView.leftAxis
+        yAxis.labelFont = .boldSystemFont(ofSize: 12)
+        yAxis.setLabelCount(6, force: false)
+        yAxis.labelTextColor = .white
+        yAxis.axisLineColor = .white
+        yAxis.labelPosition = .insideChart
+        
+        chartView.xAxis.labelPosition = .bottom
+        chartView.xAxis.labelFont = .boldSystemFont(ofSize: 12)
+        
+        chartView.animate(xAxisDuration: 2.5)
+        
         return chartView
     }()
     
@@ -26,8 +40,8 @@ class ViewController: UIViewController, ChartViewDelegate {
         lineChartView.centerInSuperview()
         lineChartView.width(to: view)
         lineChartView.heightToWidth(of: view)
-        // Do any additional setup after loading the view.
-        // TODO: GET a list of waterLevels
+
+        // Get data points
         DataService.shared.fetchWaterLevels { (result) in
             switch result{
                 case .success(let waterLevels):
@@ -49,8 +63,16 @@ class ViewController: UIViewController, ChartViewDelegate {
         print(entry)
     }
     
+    // TODO: add button to refresh data (gets data again from api and redraws
+    // TODO: add button to refresh view - zoom out if clicked into zoom
     func setData(){
         let set1 = LineChartDataSet(entries: waterData, label: "Water Measurements")
+        
+        set1.drawCirclesEnabled = false
+        set1.mode = .cubicBezier
+        set1.lineWidth = 2
+        set1.setColor(.white)
+        set1.drawFilledEnabled = true
         
         let data = LineChartData(dataSet: set1)
         lineChartView.data = data
